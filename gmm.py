@@ -1,3 +1,9 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+import matplotlib as mpl
+mpl.use('Agg')
+
 class GMM:
     """
     高斯混合模型（GMM），通过期望最大化（EM）算法训练。
