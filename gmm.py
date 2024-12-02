@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 import matplotlib as mpl
@@ -152,15 +151,8 @@ def plot_contours(data, means, covs, title, gmm_model):
     plt.savefig("test1_2.png")
 
 
-# 读取 CSV 文件
-df = pd.read_csv('data2.csv', header=None)  # 如果没有列名，可以设置header=None
-# 假设数据的第一列是 x，第二列是 y
-X = df.to_numpy()  # 转换为 NumPy 数组
-df = df.apply(pd.to_numeric, errors='coerce')  # 强制转换为数值型，无法转换的会变为 NaN
-df = df.dropna()  # 删除任何包含 NaN 的行
-
-# 将数据转化为 NumPy 数组
-X = df.to_numpy()
+# 读取 TXT 文件
+X = np.loadtxt('data2.txt')  # 假设数据是空格或逗号分隔的文本文件
 
 # 初始化并训练 GMM 模型
 gmm = GMM(n_components=15, n_iters=1, tol=1e-4, seed=4)
