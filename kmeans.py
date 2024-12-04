@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # 设置随机种子
-seed_value = 20
+seed_value = 2030
 np.random.seed(seed_value)
 
 
@@ -59,7 +59,7 @@ best_inertia = float('inf')
 best_model = None
 best_labels = None
 
-iterations = 10  # 多次迭代选取最佳模型
+iterations = 100  # 多次迭代选取最佳模型
 cluster = 15  # 根据需求更改聚类数量
 
 for _ in range(iterations):
@@ -82,11 +82,12 @@ y_pred = best_labels
 # 聚类结果可视化
 # 绘制颜色
 color = [
-    'midnightblue', 'darkred', 'darkgreen', 'darkviolet', 'darkslategray',
-    'darkolivegreen', 'darkorange', 'darkgoldenrod', 'indigo', 'deeppink',
-    'darkmagenta', 'navy', 'maroon', 'olive', 'forestgreen',
-    'sienna', 'slategray', 'saddlebrown', 'darkcyan', 'darkslateblue'
+    'orange', 'yellowgreen', 'olivedrab', 'darkseagreen', 'darkcyan',
+    'darkturquoise', 'deepskyblue', 'steelblue', 'slategray', 'royalblue',
+    'mediumpurple', 'darkmagenta', 'thistle', 'sandybrown', 'lightpink',
+    'indigo', 'navy', 'darkslategray', 'darkred', 'dimgray'
 ]
+
 
 fig, ax = plt.subplots()
 
@@ -94,15 +95,17 @@ fig, ax = plt.subplots()
 for i in range(cluster):
     ax.scatter(X[y_pred == i][:, 0],
                X[y_pred == i][:, 1],
-               c=color[i],
+               c=color[i], s=20, alpha=0.8,
                label=f'Cluster {i + 1}')
+
+# 绘制质心
+ax.scatter(best_model.centroids[:, 0], best_model.centroids[:, 1],
+           c='red', marker='x', s=100, linewidths=2, label='Centroids')
 
 # 设置图例在右边
 ax.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
-
-# 调整图窗口大小
-fig.set_size_inches(10, 6)
+plt.tight_layout()  # 自动调整布局，避免图例和图形重叠
 
 # 保存并展示图片
-plt.savefig('cluster_result.png', dpi=720, bbox_inches='tight', pad_inches=0.1)
-plt.show(block=True)
+plt.savefig('kmeans.png', dpi=720, bbox_inches='tight', pad_inches=0.1)
+plt.show()
