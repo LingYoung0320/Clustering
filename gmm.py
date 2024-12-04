@@ -1,106 +1,60 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
-import matplotlib as mpl
-mpl.use('Agg')
 
+# 设置随机种子
+seed_value = 2023
+np.random.seed(seed_value)
+
+# 定义高斯混合聚类类
 class GMM:
-    """
-    高斯混合模型（GMM），通过期望最大化（EM）算法训练。
-
-    参数：
-    ----------
-    n_components : int
-        高斯成分数量。
-
-    n_iters : int
-        最大迭代次数。
-
-    tol : float
-        收敛阈值，当对数似然变化小于此值时停止迭代。
-
-    seed : int
-        随机种子，用于初始化参数。
-    """
-
-    def __init__(self, n_components: int, n_iters: int, tol: float, seed: int):
-        """初始化GMM模型参数"""
-        self.n_components = n_components
-        self.n_iters = n_iters
-        self.tol = tol
-        self.seed = seed
+    def __init__(self, K, max_iter=10000, eps=1e-10):
+        self.K = K  # 聚类数量
+        self.max_iter = max_iter  # 最大迭代次数
+        self.eps = eps  # 迭代停止的阈值
 
     def fit(self, X):
-        """
-        训练GMM模型，使用期望最大化（EM）算法估计高斯成分参数。
+        self.N = X.shape[0]  # 样本数量
+        self.D = X.shape[1]  # 特征数量
+        self.X = X  # 样本数据
 
-        1. 初始化均值、协方差矩阵和权重。
-        2. 迭代E步和M步，直到模型收敛。
-        """
-        n_row, n_col = X.shape
-        self.resp = np.zeros((n_row, self.n_components))
+        # 初始化混合系数，均值和协方差矩阵
+        self.pi = np.ones(self.K) / self.K
+        self.mu = np.random.randn(self.K, self.D)
+        self.sigma = np.array([np.eye(self.D)] * self.K)
 
-        # 初始化均值、权重和协方差
-        np.random.seed(self.seed)
-        chosen = np.random.choice(n_row, self.n_components, replace=False)
-        self.means = X[chosen]
-        self.weights = np.full(self.n_components, 1 / self.n_components)
-        self.covs = np.array([np.cov(X, rowvar=False)] * self.n_components)
+        # 迭代优化
+        for i in range(self.max_iter):
+            # E 步
+            gamma = self.get_gamma()
 
-        log_likelihood = 0
-        self.converged = False
-        self.log_likelihood_trace = []
+            # M 步
+            self.update_params(gamma)
 
-        # 迭代EM算法
-        for i in range(self.n_iters):
-            log_likelihood_new = self._do_estep(X)  # E步
-            self._do_mstep(X)  # M步
-
-            if abs(log_likelihood_new - log_likelihood) <= self.tol:  # 收敛条件
-                self.converged = True
+            # 判断迭代是否终止
+            if self.is_converged(gamma):
                 break
 
-            log_likelihood = log_likelihood_new
-            self.log_likelihood_trace.append(log_likelihood)
+    def get_gamma(self):
+        # 计算后验概率，即每个样本属于每个聚类的概率
+        gamma = np.zeros((self.N, self.K))
+        for k in range(self.K):
+            gamma[:, k] = self.pi[k] * self.multivariate_normal_pdf(self.X, self.mu[k], self.sigma[k])
+        gamma = gamma / np.sum(gamma, axis=1, keepdims=True)
+        return gamma
 
-        return self
+    def update_params(self, gamma):
+        # 更新混合系数，均值和协方差矩阵
+        Nk = np.sum(gamma, axis=0)
+        self.pi = Nk / self.N
+        self.mu = np.dot(gamma.T, self.X) / Nk.reshape(-1, 1)
+        for k in range(self.K):
+            X_centered = self.X - self.mu[k]
+            self.sigma[k] = np.dot((X_centered.T * gamma[:, k]), X_centered) / Nk[k]
+            self.sigma[k] += 1e-6 * np.eye(self.sigma.shape[1])
 
-    def _do_estep(self, X):
-        """
-        E步：计算每个数据点属于每个高斯成分的责任，并更新责任矩阵。
-        """
-        self._compute_log_likelihood(X)
-        log_likelihood = np.sum(np.log(np.sum(self.resp, axis=1)))
-        self.resp = self.resp / self.resp.sum(axis=1, keepdims=1)  # 归一化
-        return log_likelihood
-
-    def _compute_log_likelihood(self, X):
-        """
-        计算每个数据点的对数似然。
-        """
-        for k in range(self.n_components):
-            prior = self.weights[k]
-            likelihood = self.multivariate_normal_pdf(X, self.means[k], self.covs[k])
-            self.resp[:, k] = prior * likelihood
-
-        return self
-
-    def _do_mstep(self, X):
-        """
-        M步：根据E步结果更新模型参数（均值、协方差和权重）。
-        """
-        resp_weights = self.resp.sum(axis=0)  # 每个高斯成分的总责任
-        self.weights = resp_weights / X.shape[0]
-
-        weighted_sum = np.dot(self.resp.T, X)  # 更新均值
-        self.means = weighted_sum / resp_weights.reshape(-1, 1)
-
-        for k in range(self.n_components):
-            diff = (X - self.means[k]).T
-            weighted_sum = np.dot(self.resp[:, k] * diff, diff.T)  # 更新协方差
-            self.covs[k] = weighted_sum / resp_weights[k]
-
-        return self
+    def is_converged(self, gamma):
+        # 判断是否满足迭代停止的阈值
+        return np.max(np.abs(gamma - self.get_gamma())) < self.eps
 
     def multivariate_normal_pdf(self, X, mean, cov):
         """
@@ -115,67 +69,38 @@ class GMM:
         pdf_values = normalization_factor * np.exp(-0.5 * maha_dist)
         return pdf_values
 
+# 导入数据
+data = np.loadtxt('normalized_data.txt')  # 使用 NumPy 读取数据
+X = data  # 取出所有数据
 
-def plot_contours(data, means, covs, title, gmm_model):
-    """
-    可视化高斯混合模型的结果，显示数据点和高斯分布的等高线。
-    """
-    plt.figure()
-    plt.plot(data[:, 0], data[:, 1], 'ko')  # 绘制数据点
+# 训练高斯混合聚类模型
+cluster = 15
+model = GMM(K=cluster)
+model.fit(X)
 
-    delta = 0.025
-    k = means.shape[0]
-    x = np.arange(-2.0, 7.0, delta)
-    y = np.arange(-2.0, 7.0, delta)
-    x_grid, y_grid = np.meshgrid(x, y)
-    coordinates = np.array([x_grid.ravel(), y_grid.ravel()]).T
+# 获取簇所属类别
+gamma = model.get_gamma()
+cluster_label = np.argmax(gamma, axis=1)
 
-    # 生成足够颜色
-    cmap = ListedColormap(plt.cm.tab20.colors[:k])
+# 聚类结果可视化
+# 绘制颜色
+color = [
+    'red', 'green', 'orange', 'dimgray', 'gold', 'khaki', 'lime',
+    'blue', 'purple', 'cyan', 'magenta', 'pink', 'brown', 'olive',
+    'navy', 'teal', 'coral', 'indigo', 'lightblue', 'darkgreen'
+]
 
-    for i in range(k):
-        mean = means[i]
-        cov = covs[i]
-        z_grid = gmm_model.multivariate_normal_pdf(coordinates, mean, cov).reshape(x_grid.shape)
-        plt.contour(x_grid, y_grid, z_grid, colors=[cmap(i)])  # 绘制等高线
+# 绘制每个类别样本的散点图并添加图例
+for i in range(cluster):
+    plt.scatter(X[cluster_label == i][:, 0],
+                X[cluster_label == i][:, 1],
+                c=color[i],
+                label=f'Cluster {i + 1}')
 
-    plt.title(title)
-    plt.tight_layout()
-    plt.show()
-    plt.savefig("test1_2.png")
+# 将图例放置在图的右边
+plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), title="Clusters")
+plt.tight_layout()  # 自动调整布局，避免图例和图形重叠
 
-
-def print_gmm_results(gmm_model):
-    """
-    打印GMM模型的训练结果：均值、协方差、权重和数据点分类。
-    """
-    print("GMM Model Results:")
-
-    # 输出均值
-    print("\nMeans of each Gaussian component:")
-    for i, mean in enumerate(gmm_model.means):
-        print(f"Component {i + 1}: {mean}")
-
-    # 输出协方差矩阵
-    print("\nCovariances of each Gaussian component:")
-    for i, cov in enumerate(gmm_model.covs):
-        print(f"Component {i + 1} covariance matrix:\n{cov}")
-
-    # 输出权重
-    print("\nWeights of each Gaussian component:")
-    for i, weight in enumerate(gmm_model.weights):
-        print(f"Component {i + 1}: {weight}")
-
-    # 输出数据点分类
-    print("\nCluster assignments (most likely component for each data point):")
-    cluster_assignments = np.argmax(gmm_model.resp, axis=1)
-    print(cluster_assignments)
-
-
-# 主逻辑：加载数据、训练模型、打印结果、可视化
-X = np.loadtxt('data2.txt')  # 读取数据
-gmm = GMM(n_components=15, n_iters=1, tol=1e-4, seed=4)  # 初始化GMM
-gmm.fit(X)  # 训练GMM
-
-print_gmm_results(gmm)  # 输出训练结果
-plot_contours(X, gmm.means, gmm.covs, 'Initial clusters', gmm)  # 可视化结果
+# 保存并展示图形
+plt.savefig('cluster_result_with_legend.png', dpi=720, bbox_inches='tight')
+plt.show()
