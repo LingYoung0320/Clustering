@@ -85,22 +85,27 @@ cluster_label = np.argmax(gamma, axis=1)
 # 聚类结果可视化
 # 绘制颜色
 color = [
-    'red', 'green', 'orange', 'dimgray', 'gold', 'khaki', 'lime',
-    'blue', 'purple', 'cyan', 'magenta', 'pink', 'brown', 'olive',
-    'navy', 'teal', 'coral', 'indigo', 'lightblue', 'darkgreen'
+    'orange', 'yellowgreen', 'olivedrab', 'darkseagreen', 'darkcyan',
+    'darkturquoise', 'deepskyblue', 'steelblue', 'slategray', 'royalblue',
+    'mediumpurple', 'darkmagenta', 'thistle', 'sandybrown', 'lightpink',
+    'indigo', 'navy', 'darkslategray', 'darkred', 'dimgray'
 ]
 
 # 绘制每个类别样本的散点图并添加图例
 for i in range(cluster):
     plt.scatter(X[cluster_label == i][:, 0],
                 X[cluster_label == i][:, 1],
-                c=color[i],
+                c=color[i], s=20, alpha=0.8,
                 label=f'Cluster {i + 1}')
 
+# 绘制每个聚类的质心（用红色叉叉）
+for i in range(cluster):
+    plt.scatter(model.mu[i, 0], model.mu[i, 1], c='red', marker='x', s=100, linewidths=3)
+
 # 将图例放置在图的右边
-plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), title="Clusters")
+plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), handles=[plt.Line2D([0], [0], marker='x', color='red', label='Centroid', markersize=10, linestyle='')] + [plt.Line2D([0], [0], marker='o', color=color[i], label=f'Cluster {i + 1}', markersize=5, linestyle='') for i in range(cluster)])
 plt.tight_layout()  # 自动调整布局，避免图例和图形重叠
 
 # 保存并展示图形
-plt.savefig('cluster_result_with_legend.png', dpi=720, bbox_inches='tight')
+plt.savefig('gmm.png', dpi=720, bbox_inches='tight')
 plt.show()
