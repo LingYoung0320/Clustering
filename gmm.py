@@ -109,3 +109,25 @@ plt.tight_layout()  # 自动调整布局，避免图例和图形重叠
 # 保存并展示图形
 plt.savefig('gmm.png', dpi=720, bbox_inches='tight')
 plt.show()
+
+# 计算并输出聚类指标
+from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+
+# 误差平方和（SSE）
+sse = 0
+for i in range(cluster):
+    cluster_points = X[cluster_label == i]
+    sse += np.sum(np.linalg.norm(cluster_points - model.mu[i], axis=1) ** 2)
+print(f'Sum of Squared Errors (SSE): {sse:.2f}')
+
+# 轮廓系数（Silhouette Coefficient）
+silhouette_coeff = silhouette_score(X, cluster_label)
+print(f'Silhouette Coefficient (SC): {silhouette_coeff:.2f}')
+
+# Calinski-Harabasz 指数（CH）
+calinski_harabasz = calinski_harabasz_score(X, cluster_label)
+print(f'Calinski-Harabasz (CH): {calinski_harabasz:.2f}')
+
+# Davies-Bouldin 指数（DB）
+davies_bouldin = davies_bouldin_score(X, cluster_label)
+print(f'Davies-Bouldin (DB): {davies_bouldin:.2f}')
