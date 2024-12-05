@@ -82,10 +82,10 @@ y_pred = best_labels
 # 聚类结果可视化
 # 绘制颜色
 color = [
-    'midnightblue', 'darkred', 'darkgreen', 'darkviolet', 'darkslategray',
-    'darkolivegreen', 'darkorange', 'darkgoldenrod', 'indigo', 'deeppink',
-    'darkmagenta', 'navy', 'maroon', 'olive', 'forestgreen',
-    'sienna', 'slategray', 'saddlebrown', 'darkcyan', 'darkslateblue'
+    'orange', 'yellowgreen', 'olivedrab', 'darkseagreen', 'darkcyan',
+    'darkturquoise', 'deepskyblue', 'steelblue', 'slategray', 'royalblue',
+    'mediumpurple', 'darkmagenta', 'thistle', 'tomato', 'lightpink',
+    'indigo', 'navy', 'darkslategray', 'darkred', 'dimgray'
 ]
 
 fig, ax = plt.subplots()
@@ -105,8 +105,8 @@ ax.scatter(best_model.centroids[:, 0], best_model.centroids[:, 1],
 ax.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
 
 # 调整图窗口大小
-fig.set_size_inches(10, 6)
-
+fig.set_size_inches(8, 6)
+plt.tight_layout()  # 自动调整布局，避免图例和图形重叠
 # 保存并展示图片
 plt.savefig('cluster_result.png', dpi=720, bbox_inches='tight', pad_inches=0.1)
 plt.show(block=True)
