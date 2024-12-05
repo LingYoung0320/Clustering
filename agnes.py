@@ -61,6 +61,12 @@ print("\u5f53\u524d\u65f6\u95f4:", formatted_time)
 dataset = np.loadtxt('data_test.txt')
 results = agnes(dataset, 15)
 
+# 计算聚类标签
+labels = np.zeros(len(dataset), dtype=int)
+for cluster_idx, cluster in enumerate(results):
+    for idx in cluster:
+        labels[idx] = cluster_idx
+
 # 可视化结果
 color = [
     'orange', 'yellowgreen', 'olivedrab', 'darkseagreen', 'darkcyan',
@@ -90,3 +96,40 @@ plt.show()
 end_time = datetime.now()
 formatted_end_time = end_time.strftime("%Y-%m-%d %H:%M:%S")
 print("\u7ed3\u675f\u65f6\u95f4:", formatted_end_time)
+
+# 计算聚类指标
+# 误差平方和 (Sum of Squared Errors, SSE)
+SSE = sum(((dataset - np.array(centroids)[labels]) ** 2).sum(axis=1))
+print(f"Sum of Squared Errors (SSE): {SSE}")
+
+# 轮廓系数 (Silhouette Coefficient, SC)
+silhouette_scores = []
+for i in range(len(dataset)):
+    same_cluster = dataset[labels == labels[i]]
+    other_clusters = dataset[labels != labels[i]]
+    a = np.mean(np.sqrt(((same_cluster - dataset[i]) ** 2).sum(axis=1))) if len(same_cluster) > 1 else 0
+    b = np.min([np.mean(np.sqrt(((dataset[labels == j] - dataset[i]) ** 2).sum(axis=1))) for j in range(15) if j != labels[i]])
+    silhouette_scores.append((b - a) / max(a, b))
+SC = np.mean(silhouette_scores)
+print(f"Silhouette Coefficient (SC): {SC}")
+
+# Calinski-Harabasz (CH)
+total_mean = dataset.mean(axis=0)
+B = sum(len(dataset[labels == i]) * ((centroid - total_mean) ** 2).sum() for i, centroid in enumerate(centroids))
+W = sum(((dataset[labels == i] - centroid) ** 2).sum() for i, centroid in enumerate(centroids))
+CH = (B / (15 - 1)) / (W / (len(dataset) - 15))
+print(f"Calinski-Harabasz (CH): {CH}")
+
+# Davies-Bouldin (DB)
+davies_bouldin_scores = []
+for i in range(15):
+    max_ratio = 0
+    for j in range(15):
+        if i != j:
+            s_i = np.mean(np.sqrt(((dataset[labels == i] - centroids[i]) ** 2).sum(axis=1)))
+            s_j = np.mean(np.sqrt(((dataset[labels == j] - centroids[j]) ** 2).sum(axis=1)))
+            d_ij = np.sqrt(((centroids[i] - centroids[j]) ** 2).sum())
+            max_ratio = max(max_ratio, (s_i + s_j) / d_ij)
+    davies_bouldin_scores.append(max_ratio)
+DB = np.mean(davies_bouldin_scores)
+print(f"Davies-Bouldin (DB): {DB}")
