@@ -82,6 +82,45 @@ model.fit(X)
 gamma = model.get_gamma()
 cluster_label = np.argmax(gamma, axis=1)
 
+# 计算簇的质心
+centroids = model.mu
+
+# 计算误差平方和 (SSE)
+SSE = sum(((X - centroids[cluster_label]) ** 2).sum(axis=1))
+print(f"Sum of Squared Errors (SSE): {SSE}")
+
+# 计算轮廓系数 (Silhouette Coefficient, SC)
+silhouette_scores = []
+for i in range(len(X)):
+    same_cluster = X[cluster_label == cluster_label[i]]
+    other_clusters = X[cluster_label != cluster_label[i]]
+    a = np.mean(np.sqrt(((same_cluster - X[i]) ** 2).sum(axis=1))) if len(same_cluster) > 1 else 0
+    b = np.min([np.mean(np.sqrt(((X[cluster_label == j] - X[i]) ** 2).sum(axis=1))) for j in range(cluster) if j != cluster_label[i]])
+    silhouette_scores.append((b - a) / max(a, b))
+SC = np.mean(silhouette_scores)
+print(f"Silhouette Coefficient (SC): {SC}")
+
+# 计算 Calinski-Harabasz 指标 (CH)
+total_mean = X.mean(axis=0)
+B = sum(len(X[cluster_label == i]) * ((centroid - total_mean) ** 2).sum() for i, centroid in enumerate(centroids))
+W = sum(((X[cluster_label == i] - centroid) ** 2).sum() for i, centroid in enumerate(centroids))
+CH = (B / (cluster - 1)) / (W / (len(X) - cluster))
+print(f"Calinski-Harabasz (CH): {CH}")
+
+# 计算 Davies-Bouldin 指标 (DB)
+davies_bouldin_scores = []
+for i in range(cluster):
+    max_ratio = 0
+    for j in range(cluster):
+        if i != j:
+            s_i = np.mean(np.sqrt(((X[cluster_label == i] - centroids[i]) ** 2).sum(axis=1)))
+            s_j = np.mean(np.sqrt(((X[cluster_label == j] - centroids[j]) ** 2).sum(axis=1)))
+            d_ij = np.sqrt(((centroids[i] - centroids[j]) ** 2).sum())
+            max_ratio = max(max_ratio, (s_i + s_j) / d_ij)
+    davies_bouldin_scores.append(max_ratio)
+DB = np.mean(davies_bouldin_scores)
+print(f"Davies-Bouldin (DB): {DB}")
+
 # 聚类结果可视化
 # 绘制颜色
 color = [
@@ -109,25 +148,3 @@ plt.tight_layout()  # 自动调整布局，避免图例和图形重叠
 # 保存并展示图形
 plt.savefig('gmm.png', dpi=720, bbox_inches='tight')
 plt.show()
-
-# 计算并输出聚类指标
-from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
-
-# 误差平方和（SSE）
-sse = 0
-for i in range(cluster):
-    cluster_points = X[cluster_label == i]
-    sse += np.sum(np.linalg.norm(cluster_points - model.mu[i], axis=1) ** 2)
-print(f'Sum of Squared Errors (SSE): {sse:.2f}')
-
-# 轮廓系数（Silhouette Coefficient）
-silhouette_coeff = silhouette_score(X, cluster_label)
-print(f'Silhouette Coefficient (SC): {silhouette_coeff:.2f}')
-
-# Calinski-Harabasz 指数（CH）
-calinski_harabasz = calinski_harabasz_score(X, cluster_label)
-print(f'Calinski-Harabasz (CH): {calinski_harabasz:.2f}')
-
-# Davies-Bouldin 指数（DB）
-davies_bouldin = davies_bouldin_score(X, cluster_label)
-print(f'Davies-Bouldin (DB): {davies_bouldin:.2f}')
