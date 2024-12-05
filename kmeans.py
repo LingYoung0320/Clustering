@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 seed_value = 2030
 np.random.seed(seed_value)
 
-
 class KMeans:
     def __init__(self, k=3, max_iter=100, tol=0.0001):
         self.k = k  # 聚类的数量
