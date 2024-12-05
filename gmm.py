@@ -87,7 +87,7 @@ cluster_label = np.argmax(gamma, axis=1)
 color = [
     'orange', 'yellowgreen', 'olivedrab', 'darkseagreen', 'darkcyan',
     'darkturquoise', 'deepskyblue', 'steelblue', 'slategray', 'royalblue',
-    'mediumpurple', 'darkmagenta', 'thistle', 'sandybrown', 'lightpink',
+    'mediumpurple', 'darkmagenta', 'thistle', 'tomato', 'lightpink',
     'indigo', 'navy', 'darkslategray', 'darkred', 'dimgray'
 ]
 
@@ -100,7 +100,7 @@ for i in range(cluster):
 
 # 绘制每个聚类的质心（用红色叉叉）
 for i in range(cluster):
-    plt.scatter(model.mu[i, 0], model.mu[i, 1], c='red', marker='x', s=100, linewidths=3)
+    plt.scatter(model.mu[i, 0], model.mu[i, 1], c='red', marker='x', s=100, linewidths=2)
 
 # 将图例放置在图的右边
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), handles=[plt.Line2D([0], [0], marker='x', color='red', label='Centroid', markersize=10, linestyle='')] + [plt.Line2D([0], [0], marker='o', color=color[i], label=f'Cluster {i + 1}', markersize=5, linestyle='') for i in range(cluster)])
