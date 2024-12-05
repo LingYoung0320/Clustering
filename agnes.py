@@ -55,10 +55,10 @@ def agnes(dataset, n_clusters):
 # 获取当前时间
 current_time = datetime.now()
 formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
-print("当前时间:", formatted_time)
+print("\u5f53\u524d\u65f6\u95f4:", formatted_time)
 
 # 测试代码, 使用西瓜书数据集4.0
-dataset = np.loadtxt('normalized_data.txt')
+dataset = np.loadtxt('data_test.txt')
 results = agnes(dataset, 15)
 
 # 可视化结果
@@ -80,6 +80,7 @@ for idx, r in enumerate(results):
     plt.scatter(centroid[0], centroid[1], color='r', marker='x', s=100, linewidths=2)
 
 # 添加图例
+plt.scatter([], [], color='r', marker='x', s=100, linewidths=2, label='Centroids')
 plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
 plt.tight_layout()  # 自动调整布局，避免图例和图形重叠
 plt.savefig('ag.png', dpi=720, bbox_inches='tight')
@@ -88,4 +89,4 @@ plt.show()
 # 获取当前时间
 end_time = datetime.now()
 formatted_end_time = end_time.strftime("%Y-%m-%d %H:%M:%S")
-print("结束时间:", formatted_end_time)
+print("\u7ed3\u675f\u65f6\u95f4:", formatted_end_time)
