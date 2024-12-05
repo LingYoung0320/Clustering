@@ -4,8 +4,8 @@ from datetime import datetime
 import heapq
 
 '''
-AGNES层次聚类，采用自底向上聚合策略的算法。先将数据集的每个样本看做一个初始的聚类簇，然后算法运行的每一步中找出距离最近的两个
-类簇进行合并，该过程不断重复，直至达到预设的聚类簇的个数。
+AGNES层次聚类，采用自底向上聚合策略的算法。先将数据集的每个样本看做一个初始的聚类群，然后算法运行的每一步中找出距离最近的两个
+群结迟行合并，该过程不断重复，直至达到预设的聚类群的个数。
 '''
 # 计算欧式距离矩阵
 def calculate_distance_matrix(dataset):
@@ -26,17 +26,17 @@ def agnes(dataset, n_clusters):
         for j in range(i + 1, n_samples):
             heapq.heappush(heap, (distance_matrix[i, j], i, j))
 
-    # 使用一个集合来跟踪有效的簇索引
+    # 使用一个集合来跟踪有效的群索引
     valid_clusters = set(range(n_samples))
 
     while len(valid_clusters) > n_clusters:
-        # 从堆中取出距离最小的两个簇
+        # 从堆中取出距离最小的两个群
         while True:
             min_dist, cluster_i, cluster_j = heapq.heappop(heap)
             if cluster_i in valid_clusters and cluster_j in valid_clusters:
                 break
 
-        # 合并簇
+        # 合并群
         clusters[cluster_i] = clusters[cluster_i].union(clusters[cluster_j])
         valid_clusters.remove(cluster_j)
 
@@ -62,11 +62,26 @@ dataset = np.loadtxt('normalized_data.txt')
 results = agnes(dataset, 15)
 
 # 可视化结果
-for r in results:
+color = [
+    'orange', 'yellowgreen', 'olivedrab', 'darkseagreen', 'darkcyan',
+    'darkturquoise', 'deepskyblue', 'steelblue', 'slategray', 'royalblue',
+    'mediumpurple', 'darkmagenta', 'thistle', 'tomato', 'lightpink',
+    'indigo', 'navy', 'darkslategray', 'darkred', 'dimgray'
+]
+centroids = []
+
+for idx, r in enumerate(results):
     drawpoints = list(r)
     drawdata = dataset[drawpoints]
-    plt.scatter(drawdata[:, 0], drawdata[:, 1], marker='o')
+    plt.scatter(drawdata[:, 0], drawdata[:, 1], color=color[idx % len(color)], marker='o', s=20, alpha=0.8, label=f'Cluster {idx + 1}')
+    # 计算质心，这里选择聚类中的几何中心
+    centroid = np.mean(drawdata, axis=0)
+    centroids.append(centroid)
+    plt.scatter(centroid[0], centroid[1], color='r', marker='x', s=100, linewidths=2)
 
+# 添加图例
+plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
+plt.tight_layout()  # 自动调整布局，避免图例和图形重叠
 plt.savefig('ag.png', dpi=720, bbox_inches='tight')
 plt.show()
 
