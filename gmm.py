@@ -1,5 +1,7 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 # 设置随机种子
 seed_value = 2023
@@ -24,18 +26,12 @@ class GMM:
 
         # 迭代优化
         for i in range(self.max_iter):
-            # E 步
             gamma = self.get_gamma()
-
-            # M 步
             self.update_params(gamma)
-
-            # 判断迭代是否终止
             if self.is_converged(gamma):
                 break
 
     def get_gamma(self):
-        # 计算后验概率，即每个样本属于每个聚类的概率
         gamma = np.zeros((self.N, self.K))
         for k in range(self.K):
             gamma[:, k] = self.pi[k] * self.multivariate_normal_pdf(self.X, self.mu[k], self.sigma[k])
@@ -43,7 +39,6 @@ class GMM:
         return gamma
 
     def update_params(self, gamma):
-        # 更新混合系数，均值和协方差矩阵
         Nk = np.sum(gamma, axis=0)
         self.pi = Nk / self.N
         self.mu = np.dot(gamma.T, self.X) / Nk.reshape(-1, 1)
@@ -53,98 +48,90 @@ class GMM:
             self.sigma[k] += 1e-6 * np.eye(self.sigma.shape[1])
 
     def is_converged(self, gamma):
-        # 判断是否满足迭代停止的阈值
         return np.max(np.abs(gamma - self.get_gamma())) < self.eps
 
     def multivariate_normal_pdf(self, X, mean, cov):
-        """
-        计算多维正态分布的概率密度函数（PDF）。
-        """
         d = mean.shape[0]
         diff = X - mean
         cov_inv = np.linalg.inv(cov)
         cov_det = np.linalg.det(cov)
-        maha_dist = np.sum(np.dot(diff, cov_inv) * diff, axis=1)  # 马哈拉诺比斯距离
+        maha_dist = np.sum(np.dot(diff, cov_inv) * diff, axis=1)
         normalization_factor = (2 * np.pi) ** (-d / 2) * cov_det ** (-0.5)
-        pdf_values = normalization_factor * np.exp(-0.5 * maha_dist)
-        return pdf_values
+        return normalization_factor * np.exp(-0.5 * maha_dist)
+
+# 创建结果保存目录
+os.makedirs('gmm_pic', exist_ok=True)
 
 # 导入数据
-data = np.loadtxt('normalized_data.txt')  # 使用 NumPy 读取数据
-X = data  # 取出所有数据
+data = np.loadtxt('normalized_data.txt')
+X = data
 
-# 训练高斯混合聚类模型
-cluster = 15
-model = GMM(K=cluster)
-model.fit(X)
+# 文件保存路径
+result_file = 'gmm_2to20_result.txt'
+with open(result_file, 'w') as file:
+    file.write("K\tSSE\tSC\tCH\tDB\tTime(ms)\n")
 
-# 获取簇所属类别
-gamma = model.get_gamma()
-cluster_label = np.argmax(gamma, axis=1)
+# 遍历不同的聚类数
+for k in range(2, 21):
+    start_time = time.time()
 
-# 计算簇的质心
-centroids = model.mu
+    model = GMM(K=k)
+    model.fit(X)
 
-# 计算误差平方和 (SSE)
-SSE = sum(((X - centroids[cluster_label]) ** 2).sum(axis=1))
-print(f"Sum of Squared Errors (SSE): {SSE}")
+    # 获取簇所属类别
+    gamma = model.get_gamma()
+    cluster_label = np.argmax(gamma, axis=1)
+    centroids = model.mu
 
-# 计算轮廓系数 (Silhouette Coefficient, SC)
-silhouette_scores = []
-for i in range(len(X)):
-    same_cluster = X[cluster_label == cluster_label[i]]
-    other_clusters = X[cluster_label != cluster_label[i]]
-    a = np.mean(np.sqrt(((same_cluster - X[i]) ** 2).sum(axis=1))) if len(same_cluster) > 1 else 0
-    b = np.min([np.mean(np.sqrt(((X[cluster_label == j] - X[i]) ** 2).sum(axis=1))) for j in range(cluster) if j != cluster_label[i]])
-    silhouette_scores.append((b - a) / max(a, b))
-SC = np.mean(silhouette_scores)
-print(f"Silhouette Coefficient (SC): {SC}")
+    # SSE
+    SSE = sum(((X - centroids[cluster_label]) ** 2).sum(axis=1))
 
-# 计算 Calinski-Harabasz 指标 (CH)
-total_mean = X.mean(axis=0)
-B = sum(len(X[cluster_label == i]) * ((centroid - total_mean) ** 2).sum() for i, centroid in enumerate(centroids))
-W = sum(((X[cluster_label == i] - centroid) ** 2).sum() for i, centroid in enumerate(centroids))
-CH = (B / (cluster - 1)) / (W / (len(X) - cluster))
-print(f"Calinski-Harabasz (CH): {CH}")
+    # SC
+    silhouette_scores = []
+    for i in range(len(X)):
+        same_cluster = X[cluster_label == cluster_label[i]]
+        other_clusters = X[cluster_label != cluster_label[i]]
+        a = np.mean(np.sqrt(((same_cluster - X[i]) ** 2).sum(axis=1))) if len(same_cluster) > 1 else 0
+        b = np.min([np.mean(np.sqrt(((X[cluster_label == j] - X[i]) ** 2).sum(axis=1))) for j in range(k) if j != cluster_label[i]])
+        silhouette_scores.append((b - a) / max(a, b))
+    SC = np.mean(silhouette_scores)
 
-# 计算 Davies-Bouldin 指标 (DB)
-davies_bouldin_scores = []
-for i in range(cluster):
-    max_ratio = 0
-    for j in range(cluster):
-        if i != j:
-            s_i = np.mean(np.sqrt(((X[cluster_label == i] - centroids[i]) ** 2).sum(axis=1)))
-            s_j = np.mean(np.sqrt(((X[cluster_label == j] - centroids[j]) ** 2).sum(axis=1)))
-            d_ij = np.sqrt(((centroids[i] - centroids[j]) ** 2).sum())
-            max_ratio = max(max_ratio, (s_i + s_j) / d_ij)
-    davies_bouldin_scores.append(max_ratio)
-DB = np.mean(davies_bouldin_scores)
-print(f"Davies-Bouldin (DB): {DB}")
+    # CH
+    total_mean = X.mean(axis=0)
+    B = sum(len(X[cluster_label == i]) * ((centroid - total_mean) ** 2).sum() for i, centroid in enumerate(centroids))
+    W = sum(((X[cluster_label == i] - centroid) ** 2).sum() for i, centroid in enumerate(centroids))
+    CH = (B / (k - 1)) / (W / (len(X) - k))
 
-# 聚类结果可视化
-# 绘制颜色
-color = [
-    'orange', 'yellowgreen', 'olivedrab', 'darkseagreen', 'darkcyan',
-    'darkturquoise', 'deepskyblue', 'steelblue', 'slategray', 'royalblue',
-    'mediumpurple', 'darkmagenta', 'thistle', 'tomato', 'lightpink',
-    'indigo', 'navy', 'darkslategray', 'darkred', 'dimgray'
-]
+    # DB
+    davies_bouldin_scores = []
+    for i in range(k):
+        max_ratio = 0
+        for j in range(k):
+            if i != j:
+                s_i = np.mean(np.sqrt(((X[cluster_label == i] - centroids[i]) ** 2).sum(axis=1)))
+                s_j = np.mean(np.sqrt(((X[cluster_label == j] - centroids[j]) ** 2).sum(axis=1)))
+                d_ij = np.sqrt(((centroids[i] - centroids[j]) ** 2).sum())
+                max_ratio = max(max_ratio, (s_i + s_j) / d_ij)
+        davies_bouldin_scores.append(max_ratio)
+    DB = np.mean(davies_bouldin_scores)
 
-# 绘制每个类别样本的散点图并添加图例
-for i in range(cluster):
-    plt.scatter(X[cluster_label == i][:, 0],
-                X[cluster_label == i][:, 1],
-                c=color[i], s=20, alpha=0.8,
-                label=f'Cluster {i + 1}')
+    # 时间
+    elapsed_time = (time.time() - start_time) * 1000
 
-# 绘制每个聚类的质心（用红色叉叉）
-for i in range(cluster):
-    plt.scatter(model.mu[i, 0], model.mu[i, 1], c='red', marker='x', s=100, linewidths=2)
+    # 写入结果
+    with open(result_file, 'a') as file:
+        file.write(f"{k}\t{SSE:.4f}\t{SC:.4f}\t{CH:.4f}\t{DB:.4f}\t{elapsed_time:.2f}\n")
 
-# 将图例放置在图的右边
-plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), handles=[plt.Line2D([0], [0], marker='x', color='red', label='Centroid', markersize=10, linestyle='')] + [plt.Line2D([0], [0], marker='o', color=color[i], label=f'Cluster {i + 1}', markersize=5, linestyle='') for i in range(cluster)])
-plt.tight_layout()  # 自动调整布局，避免图例和图形重叠
+    # 绘图
+    plt.figure()
+    for i in range(k):
+        plt.scatter(X[cluster_label == i][:, 0], X[cluster_label == i][:, 1], s=10, alpha=0.8, label=f'Cluster {i + 1}')
+    for i in range(k):
+        plt.scatter(model.mu[i, 0], model.mu[i, 1], c='red', marker='x', s=50, linewidths=2)
+    plt.legend()
+    plt.title(f'GMM with K={k}')
+    plt.tight_layout()
+    plt.savefig(f'gmm_pic/gmm_k={k}.png', dpi=300)
+    plt.close()
 
-# 保存并展示图形
-plt.savefig('gmm.png', dpi=720, bbox_inches='tight')
-plt.show()
+print("任务完成，结果已保存到gmm_2to20_result.txt，图像存储在gmm_pic文件夹中。")
